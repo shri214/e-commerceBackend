@@ -3,12 +3,13 @@ package com.ecommerce.ecommerce.Services;
 import com.ecommerce.ecommerce.Entity.*;
 import com.ecommerce.ecommerce.GlobalError.UserAlreadyExitsException;
 import com.ecommerce.ecommerce.GlobalError.ValidationException;
+import com.ecommerce.ecommerce.Reposetory.CartRepo;
 import com.ecommerce.ecommerce.Reposetory.ProductAssetsRepo;
 import com.ecommerce.ecommerce.Reposetory.ProductRepo;
-import com.ecommerce.ecommerce.Utils.Utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,9 +21,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class ProductServices {
@@ -30,11 +29,12 @@ public class ProductServices {
     @Autowired
     private ProductRepo productRepo;
     @Autowired
-   private ProductAssetsRepo productAssetsRepo;
-
-    public ResponseEntity<ProductResponse>getProduct(int page, int size) {
-        Pageable pageable= PageRequest.of(page, size);
-        Page<Product> productPage=productRepo.findAll(pageable);
+    private ProductAssetsRepo productAssetsRepo;
+    @Autowired
+    private CartRepo cartRepo;
+    public ResponseEntity<ProductResponse> getProduct(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> productPage = productRepo.findAll(pageable);
 //        Optional<User> u=Utils.getCurrentUsers();
 //        if(u.isPresent()){
 //            System.out.println(u.get());
@@ -42,20 +42,20 @@ public class ProductServices {
         if (productPage.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-        List<ProductDto> productDtos=productPage.getContent().stream().map(ProductDto::new).toList();
+        List<ProductDto> productDtos = productPage.getContent().stream().map(ProductDto::new).toList();
         ProductResponse response = new ProductResponse("success", productDtos, "Products retrieved successfully", productPage.getTotalPages(), productPage.getSize());
-        System.out.println(response);
+
         return ResponseEntity.ok().body(response);
     }
 
-    public ResponseEntity<ProductResponse> getProductById(String id){
+    public ResponseEntity<ProductResponse> getProductById(String id) {
         try {
-            Product product=productRepo.findById(id).orElseThrow(()->new RuntimeException("product id ont matched"));
-                ProductDto productDtos=new ProductDto(product);
-                ProductResponse response = new ProductResponse("success", List.of(productDtos), "Products retrieved successfully");
-                return ResponseEntity.ok().body(response);
+            Product product = productRepo.findById(id).orElseThrow(() -> new RuntimeException("product id ont matched"));
+            ProductDto productDtos = new ProductDto(product);
+            ProductResponse response = new ProductResponse("success", List.of(productDtos), "Products retrieved successfully");
+            return ResponseEntity.ok().body(response);
 
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new RuntimeException("something issue occurred");
         }
 
@@ -74,9 +74,9 @@ public class ProductServices {
                     throw new UserAlreadyExitsException("Product already exists; cannot add duplicate product.");
                 }
 //                product.setImage(file.getBytes());
-                List<ProductAssets> productAssets=new ArrayList<>();
-                for (MultipartFile files:file){
-                    ProductAssets assets=new ProductAssets();
+                List<ProductAssets> productAssets = new ArrayList<>();
+                for (MultipartFile files : file) {
+                    ProductAssets assets = new ProductAssets();
                     assets.setImage(files.getBytes());
                     assets.setProduct(product);
                     productAssets.add(assets);
@@ -96,14 +96,22 @@ public class ProductServices {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
-    public void saveAsset(ProductAssets productAssets){
+    public void saveAsset(String id, MultipartFile productAssets) {
         try {
-           ProductAssets p= productAssetsRepo.save(productAssets);
-            System.out.println(p.getId());
-        }catch (Exception ex){
+            Optional<Product> p=productRepo.findById(id);
+            if (p.isEmpty()){
+                throw new ValidationException("product not found !");
+            }
+            Product product1=p.get();
+            ProductAssets productAssets1=new ProductAssets();
+            productAssets1.setProduct(product1);
+            productAssets1.setImage(productAssets.getBytes());
+            productAssetsRepo.save(productAssets1);
+        } catch (Exception ex) {
             throw new RuntimeException("issue occurred while saving assest");
         }
     }
+
     public boolean validateProduct(Product product) {
         if (product.getName() == null || product.getDescription() == null || product.getDescription() == null) {
             return false;
@@ -111,18 +119,15 @@ public class ProductServices {
         return true;
     }
 
-    public ResponseEntity<Product> deleteProductById(String id){
-        Optional<User> u= Utils.getCurrentUsers();
-        if(u.isEmpty()){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        Product product=productRepo.findById(id).orElseThrow(()->new RuntimeException("product not mateced"));
-        try {
+    @Transactional
+    public String delete(String id){
+       try{
+           cartRepo.deleteByProduct_Id(id);
            productRepo.deleteById(id);
-           return ResponseEntity.ok(product);
-        }catch (Exception ex){
-            throw new RuntimeException("some thing error occurred during deleting");
-        }
+           return "product deleted success fully :)";
+       } catch (Exception e) {
+           throw new RuntimeException(e);
+       }
     }
 }
 

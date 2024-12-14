@@ -74,9 +74,11 @@ public class UserServices {
 //            }
             Authentication a = authentication(user.getUserName(), user.getPassword());
             if (a.isAuthenticated()){
-                String token= jwtServices.getJsonToken(user.getUserName());
+//                String token= jwtServices.getJsonToken(user.getUserName());
                 String role=existingUser.getRole();
-                return new UserDto(jwtServices.getJsonToken(user.getUserName()), user.getUserName(), role);
+                String userId=existingUser.getId();
+                System.out.println("user id "+ userId);
+                return new UserDto(jwtServices.getJsonToken(user.getUserName()), user.getUserName(), role, userId);
             }
             throw new RuntimeException("Login failed: invalid credentials.");
         }else{

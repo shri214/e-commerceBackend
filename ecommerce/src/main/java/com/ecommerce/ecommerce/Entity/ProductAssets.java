@@ -20,7 +20,8 @@ public class ProductAssets {
     @Lob
     private byte[] image;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER
+    )
     @JoinColumn(name = "product_id")
     @JsonBackReference
     @ToString.Exclude

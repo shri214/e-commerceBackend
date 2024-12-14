@@ -3,10 +3,15 @@ package com.ecommerce.ecommerce.Services;
 import com.ecommerce.ecommerce.Entity.Cart;
 import com.ecommerce.ecommerce.Entity.CartItem;
 import com.ecommerce.ecommerce.Entity.Product;
+import com.ecommerce.ecommerce.Entity.User;
 import com.ecommerce.ecommerce.Reposetory.CartRepo;
 import com.ecommerce.ecommerce.Reposetory.ProductRepo;
+import com.ecommerce.ecommerce.Utils.Utils;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -100,12 +105,24 @@ public class CartServices {
         MyPricipleDetails principal = (MyPricipleDetails) authentication.getPrincipal();
         String userIds = principal.getUserId();
 
+        Optional<User> u= Utils.getCurrentUsers();
+
         Optional<Cart> cartOpt = cartRepo.findByUser_Id(userIds);
 
         if (!cartOpt.isPresent()) {
             throw new RuntimeException("Cart not found for user");
         }
         return ResponseEntity.ok().body(cartOpt.get().getItems());
+
+//        Pageable pageable = PageRequest.of(page, size);
+//
+//        Page<Cart> cartPage=cartRepo.findByUser_Id(pageable, userIds);
+//
+//        if (cartPage.isEmpty()) {
+//            throw new RuntimeException("Cart not found for user");
+//        }
+//        System.out.println(cartPage.getContent().stream());
+
     }
 
     public List<Cart> getCartItems() {

@@ -57,6 +57,7 @@ private UserServices userServices;
             authToken.put("token", userDto.getToken());
             authToken.put("userName", userDto.getUserName());
             authToken.put("role", userDto.getRole());
+            authToken.put("userId",userDto.getUserId());
             return ResponseEntity.ok(authToken);
         }catch (Exception ex){
             throw new RuntimeException(ex);
